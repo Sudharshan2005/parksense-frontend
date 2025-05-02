@@ -75,7 +75,6 @@ router.post('/:plateid', async (req, res) => {
   });
 
 
-  let vehicleData = {}; // e.g., { "ABC1234": { entryTime, exitTime, duration, status } }
 
   router.put('/:plateNumber/exit', async (req, res) => {
     try {

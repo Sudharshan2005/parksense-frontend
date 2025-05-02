@@ -8,17 +8,6 @@ import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
 import { Car, LogOut, ThumbsUp } from "lucide-react"
 import Timer from "@/components/timer"
 
@@ -32,10 +21,6 @@ interface Vehicle {
   user: { name?: string; phone: string }
 }
 
-interface FeedbackData {
-  rating: number
-  comment: string
-}
 
 export default function ExitConfirmation() {
   const params = useParams<{ plateId: string }>()
@@ -49,13 +34,12 @@ export default function ExitConfirmation() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const plateNumber = params.plateId || "KA01AB1234"
+  const plateNumber = params.plateId || "Error"
 
   useEffect(() => {
     const fetchVehicle = async () => {
       setIsLoading(true)
       try {
-        console.log(`Fetching vehicle for plateNumber: ${plateNumber}`)
         const response = await fetch(`http://localhost:5001/api/vehicles/get/${plateNumber}`)
         if (!response.ok) {
           if (response.status === 404) {
@@ -67,7 +51,6 @@ export default function ExitConfirmation() {
         const data: Vehicle = await response.json()
         setVehicle(data)
         setParkingStarted(data.status !== "Exited")
-        console.log(`Vehicle fetched:`, data)
       } catch (error) {
         console.error('Error fetching vehicle:', error)
         setError("Failed to load vehicle data. Please try again or start a new session.")

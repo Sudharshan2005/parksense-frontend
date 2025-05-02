@@ -58,7 +58,6 @@ export default function UserDashboard() {
   const router = useRouter()
   const { toast } = useToast()
 
-  // States
   const [showConfirmation, setShowConfirmation] = useState(true)
   const [userInfo, setUserInfo] = useState<UserInfo>({ phone: "" })
   const [parkingStarted, setParkingStarted] = useState(true)
@@ -80,14 +79,13 @@ export default function UserDashboard() {
   const [elapsedTime, setElapsedTime] = useState(0)
 
   const plateNumber = params.plateId || "KA01AB1234"
-  const phoneNumber = userInfo.phone
+  const phoneNumber = userInfo.phone || "Error"
 
   // Set QR code URL client-side
   useEffect(() => {
     if (typeof window !== "undefined") {
       const url = `${window.location.origin}/exit-confirmation/${plateNumber}`
       setQrCodeUrl(url)
-      console.log('QR Code URL:', url)
     }
   }, [plateNumber])
 
@@ -281,7 +279,6 @@ export default function UserDashboard() {
       }
 
       const data = await response.json()
-      console.log(data.message)
       setShowFeedback(false)
       setFeedback({ rating: 5, comment: '' })
       toast({
