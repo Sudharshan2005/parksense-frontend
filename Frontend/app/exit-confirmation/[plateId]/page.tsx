@@ -10,6 +10,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge"
 import { Car, LogOut, ThumbsUp } from "lucide-react"
 import Timer from "@/components/timer"
+import dotenv from "dotenv";
+dotenv.config();
+
+const APP_LINK = process.env.NEXT_PUBLIC_APP_LINK;
 
 interface Vehicle {
   _id: string
@@ -36,11 +40,31 @@ export default function ExitConfirmation() {
 
   const plateNumber = params.plateId || "Error"
 
+  const deleteNumberPlate = async (plateNumber: string) => {
+    try {
+      const response = await fetch(`${APP_LINK}/api/numberplates/${plateNumber}`, {
+        method: 'DELETE',
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete number plate');
+      }
+  
+      console.log('Deleted successfully:', data.message);
+      return data.message;
+    } catch (error) {
+      console.error('Error deleting number plate:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     const fetchVehicle = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch(`http://localhost:5001/api/vehicles/get/${plateNumber}`)
+        const response = await fetch(`${APP_LINK}/api/vehicles/get/${plateNumber}`)
         if (!response.ok) {
           if (response.status === 404) {
             setError(`Vehicle ${plateNumber} not found. Please start a parking session.`)
@@ -73,7 +97,7 @@ export default function ExitConfirmation() {
       const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60))
       const formattedDuration = (hours > 0 ? `${hours}h ` : '') + `${minutes}m`
 
-      const response = await fetch(`http://localhost:5001/api/vehicles/${plateNumber}/exit`, {
+      const response = await fetch(`${APP_LINK}/api/vehicles/${plateNumber}/exit`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -88,7 +112,7 @@ export default function ExitConfirmation() {
       if (!response.ok) {
         throw new Error('Failed to update vehicle status')
       }
-
+      deleteNumberPlate(plateNumber);
       setParkingStarted(false)
       setExitTime(end.toISOString())
       setParkingDuration(formattedDuration)

@@ -26,6 +26,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Clock, Car, MapPin, LogOut, TimerIcon, ThumbsUp } from "lucide-react"
 import Timer from "@/components/timer"
 import { QRCodeSVG } from "qrcode.react"
+import dotenv from "dotenv"
+dotenv.config()
+
+const APP_LINK = process.env.NEXT_PUBLIC_APP_LINK;
 
 interface UserInfo {
   phone: string
@@ -76,6 +80,7 @@ export default function UserDashboard() {
   const [parkingDuration, setParkingDuration] = useState<string | null>(null)
   const [qrCodeUrl, setQrCodeUrl] = useState("")
   const [elapsedTime, setElapsedTime] = useState(0)
+  const [carImageUrl, setCarImageUrl] = useState<string | null>(null)
 
   const plateNumber = params.plateId || "KA01AB1234"
   const phoneNumber = userInfo.phone || "Error"
@@ -88,10 +93,33 @@ export default function UserDashboard() {
     }
   }, [plateNumber])
 
+  // Fetch car image URL from numberplates collection
+  useEffect(() => {
+    const fetchCarImage = async () => {
+      try {
+        const response = await fetch(`${APP_LINK}/api/numberplates/${plateNumber}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch car image')
+        }
+        const data = await response.json()
+        setCarImageUrl(data.imageUrl)
+      } catch (error) {
+        console.error('Error fetching car image:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load car image. Please try again.',
+          variant: 'destructive',
+        })
+        setCarImageUrl(null)
+      }
+    }
+    fetchCarImage()
+  }, [plateNumber, toast])
+
   useEffect(() => {
     const fetchVehicle = async () => {
       try {
-        const response = await fetch(`http://localhost:5001/api/vehicles/get/${plateNumber}`)
+        const response = await fetch(`${APP_LINK}/api/vehicles/get/${plateNumber}`)
         if (!response.ok) {
           throw new Error('Failed to fetch vehicle')
         }
@@ -167,7 +195,7 @@ export default function UserDashboard() {
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
-        const response = await fetch('http://localhost:5001/api/vehicles')
+        const response = await fetch(`${APP_LINK}/api/vehicles`)
         if (!response.ok) {
           throw new Error('Failed to fetch vehicles')
         }
@@ -190,7 +218,7 @@ export default function UserDashboard() {
   const fetchDirections = async () => {
     setIsLoadingDirections(true)
     try {
-      const res = await axios.get(`http://localhost:5001/api/directions/${slot}`)
+      const res = await axios.get(`${APP_LINK}/api/directions/${slot}`)
       setDirection(res.data)
     } catch (err) {
       console.error('Error fetching directions:', err)
@@ -221,7 +249,7 @@ export default function UserDashboard() {
     }
 
     try {
-      const response = await fetch(`http://localhost:5001/api/vehicles/${plateNumber}`, {
+      const response = await fetch(`${APP_LINK}/api/vehicles/${plateNumber}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -261,7 +289,7 @@ export default function UserDashboard() {
   const handleFeedbackSubmit = async () => {
     try {
       setError(null)
-      const response = await fetch('http://localhost:5001/api/feedback', {
+      const response = await fetch(`${APP_LINK}/api/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -302,7 +330,7 @@ export default function UserDashboard() {
       const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60))
       const formattedDuration = (hours > 0 ? `${hours}h ` : '') + `${minutes}m`
 
-      const response = await fetch(`http://localhost:5001/api/vehicles/${plateNumber}/exit`, {
+      const response = await fetch(`${APP_LINK}/api/vehicles/${plateNumber}/exit`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -382,7 +410,15 @@ export default function UserDashboard() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="flex flex-col items-center gap-4 p-4 border border-gray-800 rounded-lg bg-gray-900">
-                    <Car className="h-12 w-12" />
+                    {carImageUrl ? (
+                      <img
+                        src={carImageUrl}
+                        alt={`Vehicle with plate ${plateNumber}`}
+                        className="w-full max-w-[200px] h-auto rounded-md"
+                      />
+                    ) : (
+                      <Car className="h-12 w-12" />
+                    )}
                     <Badge variant="outline" className="text-lg px-4 py-2">
                       {plateNumber}
                     </Badge>

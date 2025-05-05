@@ -1,6 +1,10 @@
 "use client"
 
 import React, { useState } from 'react';
+import dotenv from "dotenv";
+dotenv.config();
+
+const APP_LINK = process.env.NEXT_PUBLIC_APP_LINK;
 
 interface UploadResponse {
   message: string;
@@ -32,7 +36,7 @@ const UploadForm: React.FC = () => {
     formData.append('image', image);
 
     try {
-      const res = await fetch('http://localhost:5001/api/upload/upload', {
+      const res = await fetch(`${APP_LINK}/api/upload/upload`, {
         method: 'POST',
         body: formData,
       });

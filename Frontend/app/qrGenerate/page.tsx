@@ -1,6 +1,10 @@
 "use client"
 
 import { useState } from 'react';
+import dotenv from "dotenv";
+dotenv.config();
+
+const APP_LINK = process.env.NEXT_PUBLIC_APP_LINK;
 
 export default function Home() {
   const [urlInput, setUrlInput] = useState('http://172.168.0.109:3000/user/new');
@@ -11,7 +15,7 @@ export default function Home() {
     try {
       // Basic URL validation
       const url = new URL(urlInput); // throws if invalid
-      const response = await fetch('http://localhost:5001/api/qr/generate', {
+      const response = await fetch(`${APP_LINK}/api/qr/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

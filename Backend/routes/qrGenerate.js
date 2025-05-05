@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import QRCode from 'qrcode';
+import NumberPlate from '../models/NumberPlate.js';
 
 const router = Router();
 
@@ -18,4 +19,26 @@ router.post('/generate', async (req, res) => {
   }
 });
 
+// routes/qrcode.js
+router.get('/generate-latest-qr', async (req, res) => {
+  try {
+    const latestVehicle = await NumberPlate.findOne().sort({ uploadedAt: -1 });
+
+    if (!latestVehicle) return res.status(404).json({ error: 'No vehicles found' });
+
+    const qrText = `http://172.168.0.234:3000/user/${latestVehicle.number}`;
+
+    QRCode.toDataURL(qrText, (err, url) => {
+      if (err) return res.status(500).json({ error: 'QR generation failed' });
+
+      res.json({ qrText, qrImageUrl: url }); // base64 image
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 export default router;
+
+

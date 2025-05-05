@@ -26,6 +26,10 @@ import LastUpdated from "@/components/last-updated"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import dotenv from "dotenv"
+dotenv.config()
+
+const APP_LINK = process.env.NEXT_PUBLIC_APP_LINK;
 
 interface VehicleUser {
   name?: string
@@ -110,6 +114,7 @@ export default function AdminDashboard() {
   const [feedbackData, setFeedbackData] = useState<Feedback[]>([])
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [showVehicleDetails, setShowVehicleDetails] = useState(false)
+  const [carImageUrl, setCarImageUrl] = useState<string | null>(null)
   
   // Set default dates: yesterday for feedbackFromDate, today for feedbackToDate
   const today = new Date()
@@ -134,8 +139,35 @@ export default function AdminDashboard() {
   
   const [count, setCount] = useState(0)
 
+  // Fetch car image when selectedVehicle changes
   useEffect(() => {
-    axios.get('http://localhost:5001/api/vehicles/active-count')
+    if (selectedVehicle) {
+      const fetchCarImage = async () => {
+        try {
+          const response = await fetch(`${APP_LINK}/api/numberplates/${selectedVehicle.plateNumber}`)
+          if (!response.ok) {
+            throw new Error('Failed to fetch car image')
+          }
+          const data = await response.json()
+          setCarImageUrl(data.imageUrl)
+        } catch (error) {
+          console.error('Error fetching car image:', error)
+          toast({
+            title: 'Error',
+            description: 'Failed to load car image. Please try again.',
+            variant: 'destructive',
+          })
+          setCarImageUrl(null)
+        }
+      }
+      fetchCarImage()
+    } else {
+      setCarImageUrl(null)
+    }
+  }, [selectedVehicle, toast])
+
+  useEffect(() => {
+    axios.get(`${APP_LINK}/api/vehicles/active-count`)
       .then(res => setCount(res.data.count))
       .catch(err => {
         console.error('Error:', err)
@@ -155,7 +187,7 @@ export default function AdminDashboard() {
     const fetchVehicles = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch('http://localhost:5001/api/vehicles')
+        const response = await fetch(`${APP_LINK}/api/vehicles`)
         if (!response.ok) throw new Error('Failed to fetch vehicles')
         const data: Vehicle[] = await response.json()
         setParkingData(data)
@@ -173,7 +205,7 @@ export default function AdminDashboard() {
     const fetchFeedbacks = async () => {
       setIsLoading(true)
       try {
-        const response = await axios.get('http://localhost:5001/api/feedback/get')
+        const response = await axios.get(`${APP_LINK}/api/feedback/get`)
         if (response.status !== 200) throw new Error('Failed to fetch feedbacks')
         const data: Feedback[] = response.data
         setFeedbackData(data)
@@ -783,7 +815,15 @@ export default function AdminDashboard() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="flex flex-col items-center gap-4 p-4 border border-gray-800 rounded-lg bg-gray-900">
-                    <Car className="h-12 w-12" />
+                    {carImageUrl ? (
+                      <img
+                        src={carImageUrl}
+                        alt={`Vehicle with plate ${selectedVehicle.plateNumber}`}
+                        className="w-full max-w-[200px] h-auto rounded-md"
+                      />
+                    ) : (
+                      <Car className="h-12 w-12" />
+                    )}
                     <Badge variant="outline" className="text-lg px-4 py-2">
                       {selectedVehicle.plateNumber}
                     </Badge>
