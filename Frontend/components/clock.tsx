@@ -26,9 +26,9 @@ const Clock: React.FC = () => {
   if (!time) return null;
 
   return (
-    <div className="flex flex-col items-center justify-center w-24 ml-auto bg-gray-900 text-white rounded-lg p-1 shadow-lg">
-      <h1 className="text-xs font-semibold">Current Time</h1>
-      <div className="text-xs font-mono">{time}</div>
+    <div className="flex flex-col items-center justify-center w-36 ml-auto bg-gray-900 text-white rounded-lg p-1 shadow-lg">
+      <h1 className="text-xl font-semibold">Current Time</h1>
+      <div className="text-xl font-mono">{time}</div>
     </div>
   );
 };

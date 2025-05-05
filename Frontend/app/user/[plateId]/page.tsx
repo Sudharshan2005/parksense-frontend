@@ -24,7 +24,6 @@ import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Clock, Car, MapPin, LogOut, TimerIcon, ThumbsUp } from "lucide-react"
-import SimplifiedParkingMap from "@/components/enhanced-parking-map"
 import Timer from "@/components/timer"
 import { QRCodeSVG } from "qrcode.react"
 
@@ -188,9 +187,6 @@ export default function UserDashboard() {
     fetchVehicles()
   }, [params.plateId])
 
-  useEffect(() => {
-    
-  })
   const fetchDirections = async () => {
     setIsLoadingDirections(true)
     try {
@@ -569,13 +565,7 @@ export default function UserDashboard() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex flex-col md:flex-row gap-4">
-                      <div className="flex-1 order-3 md:order-1">
-                        <SimplifiedParkingMap
-                          suggestedSlot={suggestedSlot}
-                          vehicles={vehicles.filter((entry) => entry.status !== "Exited")}
-                        />
-                      </div>
-                      <div className="flex-1 space-y-4 order-1 md:order-2">
+                      <div className="flex-1 space-y-4">
                         <div className="p-4 border border-gray-800 rounded-lg">
                           <h3 className="text-lg font-medium mb-2">Suggested Spot</h3>
                           <div className="flex items-center gap-2 mb-4">
@@ -595,16 +585,23 @@ export default function UserDashboard() {
                         </div>
 
                         {suggestedSlot && (
-                          <div className="p-4 border border-gray-800 rounded-lg order-2 md:order-3">
-                            <h3 className="text-lg font-medium mb-2">Directions to {suggestedSlot}</h3>
+                          <div className="p-6 border border-gray-800 rounded-lg bg-gray-900">
+                            <h3 className="text-xl font-semibold mb-4">Directions to {suggestedSlot}</h3>
                             {isLoadingDirections ? (
                               <p className="text-sm text-gray-400">Loading directions...</p>
                             ) : (
-                              <ul className="list-disc pl-5 space-y-2 text-sm text-gray-400">
+                              <ol className="space-y-4">
                                 {currentDirections.fromEntrance.map((step, index) => (
-                                  <li key={index}>{step}</li>
+                                  <li key={index} className="flex gap-4">
+                                    <div className="bg-primary rounded-full h-8 w-8 flex items-center justify-center shrink-0">
+                                      {index + 1}
+                                    </div>
+                                    <div>
+                                      <p className="text-base font-medium text-white">{step}</p>
+                                    </div>
+                                  </li>
                                 ))}
-                              </ul>
+                              </ol>
                             )}
                           </div>
                         )}

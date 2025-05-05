@@ -24,7 +24,7 @@ const LastUpdated: React.FC = () => {
   if (!lastUpdated) return <div className="text-xs text-gray-400 mt-1">Loading...</div>;
 
   return (
-    <div className="text-xs text-gray-400 mt-1">
+    <div className="text-sm text-gray-400 mt-1">
       Last Updated: {lastUpdated}
     </div>
   );

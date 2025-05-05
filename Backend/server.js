@@ -9,6 +9,7 @@ import vehicleRoutes from './routes/vehicles.js';
 import directionsRoute from './routes/directions.js';
 import qrGenerate from "./routes/qrGenerate.js"
 import feedback from "./routes/feedback.js"
+import uploadRoutes from "./routes/upload.js"
 
 dotenv.config();
 const app = express();
@@ -24,6 +25,7 @@ app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/directions', directionsRoute);
 app.use('/api/qr', qrGenerate);
 app.use('/api/feedback', feedback);
+app.use('/api/upload', uploadRoutes);
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log("Parksense backend running on port", PORT);

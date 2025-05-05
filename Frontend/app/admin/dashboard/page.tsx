@@ -82,6 +82,26 @@ const mockRoverData = [
   },
 ]
 
+// Function to format time difference
+const formatTimeAgo = (entryTime: string) => {
+  const entryDate = new Date(entryTime)
+  const now = new Date()
+  const diffInMs = now.getTime() - entryDate.getTime()
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
+  const diffInHours = Math.floor(diffInMinutes / 60)
+
+  if (diffInMinutes < 1) {
+    return "Just now"
+  } else if (diffInMinutes < 60) {
+    return `${diffInMinutes}min ago`
+  } else if (diffInHours < 24) {
+    return `${diffInHours}hr${diffInHours > 1 ? 's' : ''} ago`
+  } else {
+    const diffInDays = Math.floor(diffInHours / 24)
+    return `${diffInDays}day${diffInDays > 1 ? 's' : ''} ago`
+  }
+}
+
 export default function AdminDashboard() {
   const router = useRouter()
   const { toast } = useToast()
@@ -492,7 +512,7 @@ export default function AdminDashboard() {
                             >
                               <TableCell className="font-medium">{vehicle.plateNumber}</TableCell>
                               <TableCell>{vehicle.slot}</TableCell>
-                              <TableCell>{vehicle.entryTime}</TableCell>
+                              <TableCell>{formatTimeAgo(vehicle.entryTime)}</TableCell>
                               <TableCell>{vehicle.duration}</TableCell>
                               <TableCell>
                                 <Badge variant="outline" className="capitalize">
@@ -776,7 +796,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-gray-400">Entry Time</p>
-                      <p className="text-sm font-medium">{selectedVehicle.entryTime}</p>
+                      <p className="text-sm font-medium">{formatTimeAgo(selectedVehicle.entryTime)}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-gray-400">Duration</p>
