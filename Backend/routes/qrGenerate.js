@@ -26,7 +26,7 @@ router.get('/generate-latest-qr', async (req, res) => {
 
     if (!latestVehicle) return res.status(404).json({ error: 'No vehicles found' });
 
-    const qrText = `http://172.168.0.234:3000/user/${latestVehicle.number}`;
+    const qrText = `https://parksense-frontend.vercel.app/user/${latestVehicle.number}`;
 
     QRCode.toDataURL(qrText, (err, url) => {
       if (err) return res.status(500).json({ error: 'QR generation failed' });
