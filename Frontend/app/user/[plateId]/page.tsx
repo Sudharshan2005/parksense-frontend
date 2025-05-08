@@ -647,33 +647,19 @@ export default function UserDashboard() {
                     <>
                       <div className="space-y-2">
                         <h3 className="text-lg font-medium">From Entrance to {suggestedSlot}</h3>
-                        <ol className="space-y-4">
+                        <ul className="list-disc pl-5 space-y-2 text-sm text-gray-400">
                           {currentDirections.fromEntrance.map((step, index) => (
-                            <li key={index} className="flex gap-4">
-                              <div className="bg-primary rounded-full h-8 w-8 flex items-center justify-center shrink-0">
-                                {index + 1}
-                              </div>
-                              <div>
-                                <p className="text-base font-medium text-white">{step}</p>
-                              </div>
-                            </li>
+                            <li key={index}>{step}</li>
                           ))}
-                        </ol>
+                        </ul>
                       </div>
                       <div className="space-y-2">
                         <h3 className="text-lg font-medium">From {suggestedSlot} to Exit</h3>
-                        <ol className="space-y-4">
+                        <ul className="list-disc pl-5 space-y-2 text-sm text-gray-400">
                           {currentDirections.toExit.map((step, index) => (
-                            <li key={index} className="flex gap-4">
-                              <div className="bg-primary rounded-full h-8 w-8 flex items-center justify-center shrink-0">
-                                {index + 1}
-                              </div>
-                              <div>
-                                <p className="text-base font-medium text-white">{step}</p>
-                              </div>
-                            </li>
+                            <li key={index}>{step}</li>
                           ))}
-                        </ol>
+                        </ul>
                       </div>
                     </>
                   )}
