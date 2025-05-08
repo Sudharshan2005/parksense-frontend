@@ -5,13 +5,14 @@ import { useState, useEffect } from "react"
 interface TimerProps {
   isRunning: boolean
   startTime: string // ISO string, e.g., "2025-05-02T12:00:00.000Z"
+  onElapsedTimeChange?: (elapsedTime: number) => void // Optional callback for parent
 }
 
-export default function Timer({ isRunning, startTime }: TimerProps) {
+export default function Timer({ isRunning, startTime, onElapsedTimeChange }: TimerProps) {
   const [elapsedTime, setElapsedTime] = useState(0)
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null
+    let interval = null
 
     if (isRunning) {
       // Calculate initial elapsed time
@@ -20,6 +21,9 @@ export default function Timer({ isRunning, startTime }: TimerProps) {
         const now = new Date().getTime()
         const elapsed = Math.floor((now - start) / 1000) // Seconds
         setElapsedTime(elapsed)
+        if (onElapsedTimeChange) {
+          onElapsedTimeChange(elapsed)
+        }
       }
 
       // Update immediately
@@ -31,10 +35,14 @@ export default function Timer({ isRunning, startTime }: TimerProps) {
     return () => {
       if (interval) clearInterval(interval)
     }
-  }, [isRunning, startTime])
+  }, [isRunning, startTime, onElapsedTimeChange])
 
   // Format elapsed time as HH:MM:SS
-  const formatTime = (seconds: number) => {
+  interface FormatTimeProps {
+    seconds: number
+  }
+
+  const formatTime = (seconds: FormatTimeProps["seconds"]): string => {
     const hrs = Math.floor(seconds / 3600)
     const mins = Math.floor((seconds % 3600) / 60)
     const secs = seconds % 60
@@ -44,7 +52,7 @@ export default function Timer({ isRunning, startTime }: TimerProps) {
   }
 
   return (
-    <div className="text-lg font-medium">
+    <div className="text-lg font-medium text-white">
       {formatTime(elapsedTime)}
     </div>
   )

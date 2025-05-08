@@ -23,13 +23,15 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Clock, Car, MapPin, LogOut, TimerIcon, ThumbsUp } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle, Car, MapPin, LogOut, TimerIcon, ThumbsUp } from "lucide-react"
 import Timer from "@/components/timer"
 import { QRCodeSVG } from "qrcode.react"
+import { io, Socket } from "socket.io-client"
 import dotenv from "dotenv"
 dotenv.config()
 
-const APP_LINK = process.env.NEXT_PUBLIC_APP_LINK;
+const APP_LINK = process.env.NEXT_PUBLIC_APP_LINK || "http://localhost:5001"
 
 interface UserInfo {
   phone: string
@@ -56,6 +58,11 @@ interface Direction {
   toExit: string[]
 }
 
+interface SOSAlert {
+  message: string
+  timestamp: string
+}
+
 export default function UserDashboard() {
   const params = useParams<{ plateId: string }>()
   const router = useRouter()
@@ -69,6 +76,8 @@ export default function UserDashboard() {
   const [showFeedback, setShowFeedback] = useState(false)
   const [showDirectionsDialog, setShowDirectionsDialog] = useState(false)
   const [showQRDialog, setShowQRDialog] = useState(false)
+  const [showSOSDialog, setShowSOSDialog] = useState(false)
+  const [sosAlert, setSOSAlert] = useState<SOSAlert | null>(null)
   const [feedback, setFeedback] = useState<FeedbackData>({ rating: 5, comment: "" })
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("park")
@@ -79,11 +88,125 @@ export default function UserDashboard() {
   const [exitTime, setExitTime] = useState<string | null>(null)
   const [parkingDuration, setParkingDuration] = useState<string | null>(null)
   const [qrCodeUrl, setQrCodeUrl] = useState("")
-  const [elapsedTime, setElapsedTime] = useState(0)
   const [carImageUrl, setCarImageUrl] = useState<string | null>(null)
 
   const plateNumber = params.plateId || "KA01AB1234"
   const phoneNumber = userInfo.phone || "Error"
+
+  // Initialize Socket.IO client with retry logic
+  useEffect(() => {
+    let socket: Socket | null = null
+    let retryCount = 0
+    const maxRetries = 3
+    const retryDelay = 3000 // 3 seconds
+
+    const connectSocket = () => {
+      if (!APP_LINK) {
+        console.error("APP_LINK is undefined. Cannot initialize Socket.IO.")
+        toast({
+          title: "Configuration Error",
+          description: "Notification service is unavailable due to missing configuration.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      socket = io(APP_LINK, {
+        path: "/socket.io",
+        transports: ["websocket"],
+        reconnectionAttempts: maxRetries,
+        reconnectionDelay: retryDelay,
+      })
+
+      socket.on("connect", () => {
+        console.log("Socket connected:", socket?.id)
+        retryCount = 0
+        if (phoneNumber && phoneNumber !== "Error") {
+          socket?.emit("register", phoneNumber)
+          console.log(`Registered user with phone: ${phoneNumber}`)
+        }
+      })
+
+      socket.on("connect_error", (err) => {
+        console.error("Socket connection error:", err.message, { APP_LINK, retryCount })
+        if (retryCount < maxRetries) {
+          retryCount++
+          console.log(`Retrying connection (${retryCount}/${maxRetries})...`)
+        } else {
+          toast({
+            title: "Connection Error",
+            description: "Failed to connect to notification service. SOS alerts may be unavailable.",
+            variant: "destructive",
+          })
+        }
+      })
+
+      socket.on("sos_alert", (alert: SOSAlert) => {
+        if (alert && alert.message && alert.timestamp) {
+          console.log("Received SOS alert:", alert)
+          setSOSAlert(alert)
+          setShowSOSDialog(true)
+          localStorage.setItem("sos_alert", JSON.stringify(alert))
+        } else {
+          console.warn("Invalid SOS alert received:", alert)
+        }
+      })
+
+      socket.on("error", (err) => {
+        console.error("Socket error:", err)
+      })
+    }
+
+    try {
+      connectSocket()
+    } catch (err) {
+      console.error("Failed to initialize Socket.IO:", err)
+    }
+
+    const storedAlert = localStorage.getItem("sos_alert")
+    if (storedAlert) {
+      try {
+        const parsedAlert: SOSAlert = JSON.parse(storedAlert)
+        if (parsedAlert.message && parsedAlert.timestamp) {
+          setSOSAlert(parsedAlert)
+          setShowSOSDialog(true)
+        } else {
+          console.warn("Invalid stored SOS alert:", parsedAlert)
+          localStorage.removeItem("sos_alert")
+        }
+      } catch (err) {
+        console.error("Error parsing stored SOS alert:", err)
+        localStorage.removeItem("sos_alert")
+      }
+    }
+
+    return () => {
+      if (socket) {
+        socket.disconnect()
+        socket = null
+      }
+    }
+  }, [phoneNumber, toast])
+
+  // Play SOS alert sound
+  useEffect(() => {
+    if (showSOSDialog && sosAlert?.message && sosAlert?.timestamp) {
+      const audio = new Audio("https://cdn.pixabay.com/audio/2022/03/10/audio_2b6a8b1f8a.mp3")
+      audio.play().catch((error) => {
+        console.error("Error playing SOS alert sound:", error)
+        toast({
+          title: "Audio Error",
+          description: "Unable to play alert sound. Check browser permissions.",
+          variant: "destructive",
+        })
+      })
+      const timeout = setTimeout(() => {
+        audio.pause()
+        audio.currentTime = 0
+      }, 3000)
+      return () => clearTimeout(timeout)
+    }
+  }, [showSOSDialog, sosAlert, toast])
 
   // Set QR code URL client-side
   useEffect(() => {
@@ -99,16 +222,16 @@ export default function UserDashboard() {
       try {
         const response = await fetch(`${APP_LINK}/api/numberplates/${plateNumber}`)
         if (!response.ok) {
-          throw new Error('Failed to fetch car image')
+          throw new Error("Failed to fetch car image")
         }
         const data = await response.json()
         setCarImageUrl(data.imageUrl)
       } catch (error) {
-        console.error('Error fetching car image:', error)
+        console.error("Error fetching car image:", error)
         toast({
-          title: 'Error',
-          description: 'Failed to load car image. Please try again.',
-          variant: 'destructive',
+          title: "Error",
+          description: "Failed to load car image. Please try again.",
+          variant: "destructive",
         })
         setCarImageUrl(null)
       }
@@ -121,25 +244,24 @@ export default function UserDashboard() {
       try {
         const response = await fetch(`${APP_LINK}/api/vehicles/get/${plateNumber}`)
         if (!response.ok) {
-          throw new Error('Failed to fetch vehicle')
+          throw new Error("Failed to fetch vehicle")
         }
         const vehicle: Vehicle = await response.json()
         setEntryTime(vehicle.entryTime)
-        setParkingStarted(vehicle.status === 'Active')
+        setParkingStarted(vehicle.status === "Active")
         setSlot(vehicle.slot)
         setSuggestedSlot(vehicle.slot)
-        if (vehicle.status === 'Exited') {
+        if (vehicle.status === "Exited") {
           setExitTime(vehicle.duration)
           setParkingDuration(vehicle.duration)
         }
       } catch (error) {
-        console.error('Error fetching vehicle:', error)
+        console.error("Error fetching vehicle:", error)
         toast({
-          title: 'Error',
-          description: 'Failed to load vehicle data. Please try again.',
-          variant: 'destructive',
+          title: "Error",
+          description: "Failed to load vehicle data. Please try again.",
+          variant: "destructive",
         })
-        // Fallback to show confirmation dialog if vehicle not found
         setEntryTime(new Date().toISOString())
         setShowConfirmation(true)
       }
@@ -147,7 +269,6 @@ export default function UserDashboard() {
     fetchVehicle()
   }, [plateNumber, toast])
 
-  // Function to pick a suggested slot nearest to the entrance
   const pickSuggestedSlot = (vehicles: Vehicle[]): string => {
     const levels = ["L1", "L2", "L3", "L4"]
     const rows = 4
@@ -197,18 +318,18 @@ export default function UserDashboard() {
       try {
         const response = await fetch(`${APP_LINK}/api/vehicles`)
         if (!response.ok) {
-          throw new Error('Failed to fetch vehicles')
+          throw new Error("Failed to fetch vehicles")
         }
         const data: Vehicle[] = await response.json()
         setVehicles(data)
         const suggested = pickSuggestedSlot(data.filter((entry) => entry.status !== "Exited"))
         setSuggestedSlot(suggested)
       } catch (error) {
-        console.error('Error fetching vehicles:', error)
+        console.error("Error fetching vehicles:", error)
         toast({
-          title: 'Error',
-          description: 'Failed to load vehicle data.',
-          variant: 'destructive',
+          title: "Error",
+          description: "Failed to load vehicle data.",
+          variant: "destructive",
         })
       }
     }
@@ -221,11 +342,11 @@ export default function UserDashboard() {
       const res = await axios.get(`${APP_LINK}/api/directions/${slot}`)
       setDirection(res.data)
     } catch (err) {
-      console.error('Error fetching directions:', err)
+      console.error("Error fetching directions:", err)
       toast({
-        title: 'Error',
-        description: 'Failed to fetch directions. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to fetch directions. Please try again.",
+        variant: "destructive",
       })
       setDirection({
         slot,
@@ -250,9 +371,9 @@ export default function UserDashboard() {
 
     try {
       const response = await fetch(`${APP_LINK}/api/vehicles/${plateNumber}`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           slot: suggestedSlot,
@@ -261,7 +382,7 @@ export default function UserDashboard() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create vehicle')
+        throw new Error("Failed to create vehicle")
       }
 
       const newVehicle: Vehicle = await response.json()
@@ -273,11 +394,10 @@ export default function UserDashboard() {
         title: "Welcome to ParkSense",
         description: `Hello, we've suggested a parking spot for you: ${suggestedSlot}.`,
       })
-      // Fetch directions for the confirmed slot
       setSlot(suggestedSlot)
       fetchDirections()
     } catch (error) {
-      console.error('Error creating vehicle:', error)
+      console.error("Error creating vehicle:", error)
       toast({
         title: "Error",
         description: "Failed to start parking session.",
@@ -290,28 +410,27 @@ export default function UserDashboard() {
     try {
       setError(null)
       const response = await fetch(`${APP_LINK}/api/feedback`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ plateNumber, phoneNumber, ...feedback }),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to submit feedback')
+        throw new Error(errorData.error || "Failed to submit feedback")
       }
 
-      const data = await response.json()
       setShowFeedback(false)
-      setFeedback({ rating: 5, comment: '' })
+      setFeedback({ rating: 5, comment: "" })
       toast({
         title: "Thank You!",
         description: "Your feedback has been submitted successfully.",
       })
     } catch (error: any) {
-      console.error('Error submitting feedback:', error)
-      setError(error.message || 'An error occurred while submitting feedback')
+      console.error("Error submitting feedback:", error)
+      setError(error.message || "An error occurred while submitting feedback")
       toast({
         title: "Error",
         description: error.message || "Failed to submit feedback.",
@@ -328,12 +447,12 @@ export default function UserDashboard() {
 
       const hours = Math.floor(durationMs / (1000 * 60 * 60))
       const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60))
-      const formattedDuration = (hours > 0 ? `${hours}h ` : '') + `${minutes}m`
+      const formattedDuration = (hours > 0 ? `${hours}h ` : "") + `${minutes}m`
 
       const response = await fetch(`${APP_LINK}/api/vehicles/${plateNumber}/exit`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           exitTime: end.toISOString(),
@@ -343,7 +462,7 @@ export default function UserDashboard() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update vehicle status')
+        throw new Error("Failed to update vehicle status")
       }
 
       setParkingStarted(false)
@@ -357,13 +476,19 @@ export default function UserDashboard() {
 
       setShowFeedback(true)
     } catch (error) {
-      console.error('Error ending parking session:', error)
+      console.error("Error ending parking session:", error)
       toast({
         title: "Error",
         description: "Failed to end parking session. Please try again.",
         variant: "destructive",
       })
     }
+  }
+
+  const handleDismissSOS = () => {
+    setShowSOSDialog(false)
+    setSOSAlert(null)
+    localStorage.removeItem("sos_alert")
   }
 
   const currentDirections = direction || {
@@ -374,7 +499,6 @@ export default function UserDashboard() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
       <header className="border-b border-gray-800 p-4">
         <div className="container mx-auto flex justify-between items-center">
           <motion.div
@@ -384,7 +508,7 @@ export default function UserDashboard() {
             className="flex items-center gap-2"
           >
             <Car className="h-6 w-6" />
-            <h1 className="text-xl font-bold">ParkSense</h1>
+            <h1 className="text-xl font-bold text-white">ParkSense</h1>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -404,7 +528,7 @@ export default function UserDashboard() {
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Confirm Your Vehicle</DialogTitle>
-                  <DialogDescription>
+                  <DialogDescription className="text-gray-400">
                     We've detected your vehicle. Please confirm and provide your details.
                   </DialogDescription>
                 </DialogHeader>
@@ -424,7 +548,6 @@ export default function UserDashboard() {
                     </Badge>
                     <p className="text-sm text-gray-400">Is this your vehicle?</p>
                   </div>
-
                   <form onSubmit={handleUserInfoSubmit} className="grid gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="phone">Phone Number</Label>
@@ -451,7 +574,7 @@ export default function UserDashboard() {
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Share Your Experience</DialogTitle>
-                  <DialogDescription>
+                  <DialogDescription className="text-gray-400">
                     How was your parking experience with ParkSense today?
                   </DialogDescription>
                 </DialogHeader>
@@ -487,7 +610,6 @@ export default function UserDashboard() {
                       ))}
                     </RadioGroup>
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="comment">Additional comments</Label>
                     <Textarea
@@ -514,7 +636,7 @@ export default function UserDashboard() {
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Directions to Your Car/Exit</DialogTitle>
-                  <DialogDescription>
+                  <DialogDescription className="text-gray-400">
                     Follow these steps to find your car at {suggestedSlot} and exit the parking garage.
                   </DialogDescription>
                 </DialogHeader>
@@ -525,19 +647,33 @@ export default function UserDashboard() {
                     <>
                       <div className="space-y-2">
                         <h3 className="text-lg font-medium">From Entrance to {suggestedSlot}</h3>
-                        <ul className="list-disc pl-5 space-y-2 text-sm text-gray-400">
+                        <ol className="space-y-4">
                           {currentDirections.fromEntrance.map((step, index) => (
-                            <li key={index}>{step}</li>
+                            <li key={index} className="flex gap-4">
+                              <div className="bg-primary rounded-full h-8 w-8 flex items-center justify-center shrink-0">
+                                {index + 1}
+                              </div>
+                              <div>
+                                <p className="text-base font-medium text-white">{step}</p>
+                              </div>
+                            </li>
                           ))}
-                        </ul>
+                        </ol>
                       </div>
                       <div className="space-y-2">
                         <h3 className="text-lg font-medium">From {suggestedSlot} to Exit</h3>
-                        <ul className="list-disc pl-5 space-y-2 text-sm text-gray-400">
+                        <ol className="space-y-4">
                           {currentDirections.toExit.map((step, index) => (
-                            <li key={index}>{step}</li>
+                            <li key={index} className="flex gap-4">
+                              <div className="bg-primary rounded-full h-8 w-8 flex items-center justify-center shrink-0">
+                                {index + 1}
+                              </div>
+                              <div>
+                                <p className="text-base font-medium text-white">{step}</p>
+                              </div>
+                            </li>
                           ))}
-                        </ul>
+                        </ol>
                       </div>
                     </>
                   )}
@@ -554,7 +690,7 @@ export default function UserDashboard() {
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Scan QR Code to Exit</DialogTitle>
-                  <DialogDescription>
+                  <DialogDescription className="text-gray-400">
                     Scan this QR code at the exit gate to confirm your parking session.
                   </DialogDescription>
                 </DialogHeader>
@@ -573,7 +709,50 @@ export default function UserDashboard() {
                   )}
                 </div>
                 <DialogFooter>
-                  <Button onClick={() => { setShowQRDialog(false); setShowFeedback(true); }}>Close</Button>
+                  <Button
+                    onClick={() => {
+                      setShowQRDialog(false)
+                      setShowFeedback(true)
+                    }}
+                  >
+                    Close
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {showSOSDialog && sosAlert && (
+            <Dialog open={showSOSDialog} onOpenChange={setShowSOSDialog}>
+              <DialogContent className="sm:max-w-md bg-red-900 border-red-700 text-white">
+                <DialogHeader>
+                  <DialogTitle className="text-white flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-red-200" />
+                    Urgent Alert
+                  </DialogTitle>
+                  <DialogDescription className="text-red-200">
+                    An important message from ParkSense support.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <Alert className="bg-red-800 border-red-600">
+                    <AlertCircle className="h-4 w-4 text-red-200" />
+                    <AlertTitle className="text-white">SOS Alert</AlertTitle>
+                    <AlertDescription className="text-red-200">
+                      {sosAlert.message}
+                    </AlertDescription>
+                  </Alert>
+                  <p className="text-sm text-red-200 mt-2">
+                    Received: {new Date(sosAlert.timestamp).toLocaleString()}
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button
+                    onClick={handleDismissSOS}
+                    className="bg-red-700 text-white hover:bg-red-600"
+                  >
+                    Dismiss
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -615,7 +794,10 @@ export default function UserDashboard() {
                           <p className="text-sm text-gray-400 mb-4">
                             This spot is closest to the entrance and currently available.
                           </p>
-                          <Button className="w-full" onClick={() => setActiveTab("status")}>
+                          <Button
+                            className="w-full"
+                            onClick={() => setActiveTab("status")}
+                          >
                             Details
                           </Button>
                         </div>
@@ -688,7 +870,6 @@ export default function UserDashboard() {
                           </div>
                         </div>
                       </div>
-
                       <div className="p-4 border border-gray-800 rounded-lg">
                         <h3 className="text-lg font-medium mb-2">Parking Duration</h3>
                         <div className="flex items-center gap-4">
@@ -757,7 +938,6 @@ export default function UserDashboard() {
                           </div>
                         </div>
                       )}
-
                       <div className="p-4 border border-gray-800 rounded-lg">
                         <h3 className="text-lg font-medium mb-4">Find Your Car</h3>
                         <div className="flex items-center gap-4 mb-4">
@@ -775,13 +955,12 @@ export default function UserDashboard() {
                           className="w-full"
                           onClick={() => {
                             setShowDirectionsDialog(true)
-                            fetchDirections()
+                            if (!direction) fetchDirections()
                           }}
                         >
                           <MapPin className="mr-2 h-4 w-4" /> Get Directions
                         </Button>
                       </div>
-
                       <div className="p-4 border border-gray-800 rounded-lg">
                         <h3 className="text-lg font-medium mb-4">Exit Instructions</h3>
                         <ol className="space-y-4">

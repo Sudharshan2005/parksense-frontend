@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Car, LogOut, MoreHorizontal, RefreshCw, Search, User } from "lucide-react"
+import { AlertCircle, Car, LogOut, MoreHorizontal, RefreshCw, Search, User } from "lucide-react"
 import SimplifiedParkingMap from "@/components/enhanced-parking-map"
 import Clock from "@/components/clock"
 import LastUpdated from "@/components/last-updated"
@@ -110,6 +110,7 @@ export default function AdminDashboard() {
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [isSendingSOS, setIsSendingSOS] = useState(false)
   const [parkingData, setParkingData] = useState<Vehicle[]>([])
   const [feedbackData, setFeedbackData] = useState<Feedback[]>([])
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
@@ -242,6 +243,46 @@ export default function AdminDashboard() {
   const handleVehicleClick = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle)
     setShowVehicleDetails(true)
+  }
+
+  const handleSendSOS = async () => {
+    if (!selectedVehicle) return
+    setIsSendingSOS(true)
+    try {
+      const response = await axios.post(`${APP_LINK}/api/sos`, {
+        userId: selectedVehicle.user.phone,
+        message: `Urgent: Please check your vehicle ${selectedVehicle.plateNumber} at slot ${selectedVehicle.slot} or contact support immediately!`,
+      })
+      toast({
+        title: 'SOS Alert Sent',
+        description: `Alert sent to user with phone ${selectedVehicle.user.phone}.`,
+      })
+      setShowVehicleDetails(false)
+    } catch (error: any) {
+      console.error('Error sending SOS:', error)
+      const errorMessage =
+        error.response?.data?.error === "User not connected"
+          ? "User is not currently connected. They may not receive the alert."
+          : "Failed to send SOS alert. Please try again."
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleSendSOS()}
+            className="border-[#D1D1D1] text-[#D1D1D1] hover:bg-[#444444]"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
+        ),
+      })
+    } finally {
+      setIsSendingSOS(false)
+    }
   }
 
   const downloadCSV = () => {
@@ -808,13 +849,15 @@ export default function AdminDashboard() {
           {/* Vehicle Details Dialog */}
           {selectedVehicle && (
             <Dialog open={showVehicleDetails} onOpenChange={setShowVehicleDetails}>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md bg-[#1F1F1F] border-[#444444] text-white">
                 <DialogHeader>
-                  <DialogTitle>Vehicle Details</DialogTitle>
-                  <DialogDescription>Detailed information about the selected vehicle.</DialogDescription>
+                  <DialogTitle className="text-white">Vehicle Details</DialogTitle>
+                  <DialogDescription className="text-[#D1D1D1]">
+                    Detailed information about the selected vehicle.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <div className="flex flex-col items-center gap-4 p-4 border border-gray-800 rounded-lg bg-gray-900">
+                  <div className="flex flex-col items-center gap-4 p-4 border border-[#444444] rounded-lg bg-[#2D2D2D]">
                     {carImageUrl ? (
                       <img
                         src={carImageUrl}
@@ -822,46 +865,50 @@ export default function AdminDashboard() {
                         className="w-full max-w-[200px] h-auto rounded-md"
                       />
                     ) : (
-                      <Car className="h-12 w-12" />
+                      <Car className="h-12 w-12 text-[#D1D1D1]" />
                     )}
-                    <Badge variant="outline" className="text-lg px-4 py-2">
+                    <Badge variant="outline" className="text-lg px-4 py-2 bg-[#2D2D2D] text-white border-[#444444]">
                       {selectedVehicle.plateNumber}
                     </Badge>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <p className="text-sm text-gray-400">Parking Slot</p>
-                      <p className="text-lg font-medium">{selectedVehicle.slot}</p>
+                      <p className="text-sm text-[#D1D1D1]">Parking Slot</p>
+                      <p className="text-lg font-medium text-white">{selectedVehicle.slot}</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm text-gray-400">Entry Time</p>
-                      <p className="text-sm font-medium">{formatTimeAgo(selectedVehicle.entryTime)}</p>
+                      <p className="text-sm text-[#D1D1D1]">Entry Time</p>
+                      <p className="text-sm font-medium text-white">{formatTimeAgo(selectedVehicle.entryTime)}</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm text-gray-400">Duration</p>
-                      <p className="text-lg font-medium">{selectedVehicle.duration}</p>
+                      <p className="text-sm text-[#D1D1D1]">Duration</p>
+                      <p className="text-lg font-medium text-white">{selectedVehicle.duration}</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm text-gray-400">Status</p>
-                      <Badge variant="outline" className="capitalize">
+                      <p className="text-sm text-[#D1D1D1]">Status</p>
+                      <Badge variant="outline" className="capitalize bg-[#2D2D2D] text-white border-[#444444]">
                         {selectedVehicle.status}
                       </Badge>
                     </div>
                   </div>
 
-                  <div className="border-t border-gray-800 pt-4">
-                    <h4 className="text-sm font-medium mb-2">Driver Information</h4>
-                    <div className="flex items-center gap-4 p-2 border border-gray-800 rounded-lg">
-                      <User className="h-8 w-8 text-gray-400" />
+                  <div className="border-t border-[#444444] pt-4">
+                    <h4 className="text-sm font-medium text-white mb-2">Driver Information</h4>
+                    <div className="flex items-center gap-4 p-2 border border-[#444444] rounded-lg bg-[#2D2D2D]">
+                      <User className="h-8 w-8 text-[#D1D1D1]" />
                       <div>
-                        <p className="text-sm text-gray-400">{selectedVehicle.user.phone}</p>
+                        <p className="text-sm text-[#D1D1D1]">{selectedVehicle.user.phone}</p>
                       </div>
                     </div>
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowVehicleDetails(false)}>
+                <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowVehicleDetails(false)}
+                    className="bg-[#2D2D2D] text-white border-[#444444] hover:bg-[#444444]"
+                  >
                     Close
                   </Button>
                   <Button
@@ -872,8 +919,17 @@ export default function AdminDashboard() {
                       })
                       setShowVehicleDetails(false)
                     }}
+                    className="bg-[#D1D1D1] text-black hover:bg-[#FFFFFF]"
                   >
                     Mark as Exited
+                  </Button>
+                  <Button
+                    onClick={handleSendSOS}
+                    disabled={isSendingSOS}
+                    className="bg-[#D1D1D1] text-black hover:bg-[#FFFFFF] flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    {isSendingSOS ? "Sending..." : "Send SOS Alert"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
