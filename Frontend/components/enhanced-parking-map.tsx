@@ -124,10 +124,6 @@ const SimplifiedParkingMap = ({
               <div className="w-3 h-3 bg-green-500/50 rounded-sm"></div>
               <span>Available</span>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-primary rounded-sm"></div>
-              <span>Suggested</span>
-            </div>
           </div>
         </div>
 
