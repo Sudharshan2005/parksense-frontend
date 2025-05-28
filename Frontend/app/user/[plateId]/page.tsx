@@ -188,27 +188,7 @@ export default function UserDashboard() {
     }
   }, [phoneNumber, toast])
 
-  // Play SOS alert sound
-  // useEffect(() => {
-  //   if (showSOSDialog && sosAlert?.message && sosAlert?.timestamp) {
-  //     const audio = new Audio("https://parksense-frontend.vercel.app/audio/Siren-SoundBible.com-1094437108.mp3")
-  //     audio.play().catch((error) => {
-  //       console.error("Error playing SOS alert sound:", error)
-  //       toast({
-  //         title: "Audio Error",
-  //         description: "Unable to play alert sound. Check browser permissions.",
-  //         variant: "destructive",
-  //       })
-  //     })
-  //     const timeout = setTimeout(() => {
-  //       audio.pause()
-  //       audio.currentTime = 0
-  //     }, 3000)
-  //     return () => clearTimeout(timeout)
-  //   }
-  // }, [showSOSDialog, sosAlert, toast])
 
-  // Preload audio and handle SOS alert playback
 useEffect(() => {
   // Preload audio to reduce latency
   const audioElement = document.createElement("audio");
@@ -748,58 +728,42 @@ useEffect(() => {
             </Dialog>
           )}
 
-// SOS Dialog with "Play Alert Sound" button
-{showSOSDialog && sosAlert && (
-  <Dialog open={showSOSDialog} onOpenChange={setShowSOSDialog}>
-    <DialogContent className="sm:max-w-md bg-red-900 border-red-700 text-white">
-      <DialogHeader>
-        <DialogTitle className="text-white flex items-center gap-2">
-          <AlertCircle className="h-5 w-5 text-red-200" />
-          Urgent Alert
-        </DialogTitle>
-        <DialogDescription className="text-red-200">
-          An important message from ParkSense support.
-        </DialogDescription>
-      </DialogHeader>
-      <div className="py-4">
-        <Alert className="bg-red-800 border-red-600">
-          <AlertCircle className="h-4 w-4 text-red-200" />
-          <AlertTitle className="text-white">SOS Alert</AlertTitle>
-          <AlertDescription className="text-red-200">
-            {sosAlert.message}
-          </AlertDescription>
-        </Alert>
-        <p className="text-sm text-red-200 mt-2">
-          Received: {new Date(sosAlert.timestamp).toLocaleString()}
-        </p>
-      </div>
-      <DialogFooter className="flex flex-col sm:flex-row gap-2">
-        <Button
-          onClick={() => {
-            const audio = new Audio("/audio/Siren-SoundBible.com-1094437108.mp3");
-            audio.play().catch((error) => {
-              console.error("Error playing SOS alert sound:", error);
-              toast({
-                title: "Audio Error",
-                description: "Unable to play alert sound. Please check browser permissions.",
-                variant: "destructive",
-              });
-            });
-          }}
-          className="bg-red-700 text-white hover:bg-red-600"
-        >
-          Play Alert Sound
-        </Button>
-        <Button
-          onClick={handleDismissSOS}
-          className="bg-red-700 text-white hover:bg-red-600"
-        >
-          Dismiss
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-)}
+          {/* SOS Dialog with "Play Alert Sound" button */}
+          {showSOSDialog && sosAlert && (
+            <Dialog open={showSOSDialog} onOpenChange={setShowSOSDialog}>
+              <DialogContent className="sm:max-w-md bg-red-900 border-red-700 text-white">
+                <DialogHeader>
+                  <DialogTitle className="text-white flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-red-200" />
+                    Urgent Alert
+                  </DialogTitle>
+                  <DialogDescription className="text-red-200">
+                    An important message from ParkSense support.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <Alert className="bg-red-800 border-red-600">
+                    <AlertCircle className="h-4 w-4 text-red-200" />
+                    <AlertTitle className="text-white">SOS Alert</AlertTitle>
+                    <AlertDescription className="text-red-200">
+                      {sosAlert.message}
+                    </AlertDescription>
+                  </Alert>
+                  <p className="text-sm text-red-200 mt-2">
+                    Received: {new Date(sosAlert.timestamp).toLocaleString()}
+                  </p>
+                </div>
+                <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    onClick={handleDismissSOS}
+                    className="bg-red-700 text-white hover:bg-red-600"
+                  >
+                    Dismiss
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </AnimatePresence>
 
         {!showConfirmation && (
