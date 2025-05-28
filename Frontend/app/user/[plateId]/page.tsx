@@ -208,43 +208,44 @@ export default function UserDashboard() {
   //   }
   // }, [showSOSDialog, sosAlert, toast])
 
-  useEffect(() => {
-    if (showSOSDialog && sosAlert?.message && sosAlert?.timestamp) {
-      const audio = new Audio("https://parksense-frontend.vercel.app/audio/Siren-SoundBible.com-1094437108.mp3");
-  
-      // Function to play audio
-      const playAudio = async () => {
-        try {
-          await audio.play();
-          const timeout = setTimeout(() => {
-            audio.pause();
-            audio.currentTime = 0;
-          }, 3000);
-          return () => clearTimeout(timeout);
-        } catch (error) {
-          console.error("Error playing SOS alert sound:", error);
-          toast({
-            title: "Audio Error",
-            description: "Unable to play alert sound. Please check browser permissions.",
-            variant: "destructive",
-          });
-        }
-      };
-  
-      // Store audio in state or ref to access it later
-      const audioElement = document.createElement("audio");
-      audioElement.src = "https://parksense-frontend.vercel.app/audio/Siren-SoundBible.com-1094437108.mp3";
-  
-      // Attempt to play audio automatically
-      playAudio();
-  
-      // Return cleanup
-      return () => {
-        audio.pause();
-        audio.currentTime = 0;
-      };
-    }
-  }, [showSOSDialog, sosAlert, toast]);
+  // Preload audio and handle SOS alert playback
+useEffect(() => {
+  // Preload audio to reduce latency
+  const audioElement = document.createElement("audio");
+  audioElement.src = "/audio/Siren-SoundBible.com-1094437108.mp3";
+  audioElement.preload = "auto";
+  document.body.appendChild(audioElement);
+
+  if (showSOSDialog && sosAlert?.message && sosAlert?.timestamp) {
+    const audio = new Audio("/audio/Siren-SoundBible.com-1094437108.mp3");
+    const playAudio = async () => {
+      try {
+        await audio.play();
+        const timeout = setTimeout(() => {
+          audio.pause();
+          audio.currentTime = 0;
+        }, 3000);
+        return () => clearTimeout(timeout);
+      } catch (error) {
+        console.error("Error playing SOS alert sound:", error);
+        toast({
+          title: "Audio Error",
+          description: "Unable to play alert sound. Please click 'Play Alert Sound' or check browser permissions.",
+          variant: "destructive",
+        });
+      }
+    };
+    playAudio();
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }
+
+  return () => {
+    document.body.removeChild(audioElement);
+  };
+}, [showSOSDialog, sosAlert, toast]);
   
 
   // Set QR code URL client-side
@@ -747,7 +748,7 @@ export default function UserDashboard() {
             </Dialog>
           )}
 
-// Update the SOS Dialog to include a "Play Alert Sound" button
+// SOS Dialog with "Play Alert Sound" button
 {showSOSDialog && sosAlert && (
   <Dialog open={showSOSDialog} onOpenChange={setShowSOSDialog}>
     <DialogContent className="sm:max-w-md bg-red-900 border-red-700 text-white">
@@ -775,7 +776,7 @@ export default function UserDashboard() {
       <DialogFooter className="flex flex-col sm:flex-row gap-2">
         <Button
           onClick={() => {
-            const audio = new Audio("https://parksense-frontend.vercel.app/audio/Siren-SoundBible.com-1094437108.mp3");
+            const audio = new Audio("/audio/Siren-SoundBible.com-1094437108.mp3");
             audio.play().catch((error) => {
               console.error("Error playing SOS alert sound:", error);
               toast({
