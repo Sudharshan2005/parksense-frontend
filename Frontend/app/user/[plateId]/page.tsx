@@ -191,7 +191,7 @@ export default function UserDashboard() {
   // Play SOS alert sound
   useEffect(() => {
     if (showSOSDialog && sosAlert?.message && sosAlert?.timestamp) {
-      const audio = new Audio("https://parksense-frontend.onrender.com/audio/Siren-SoundBible.com-1094437108.mp3")
+      const audio = new Audio("https://parksense-frontend.vercel.app/audio/Siren-SoundBible.com-1094437108.mp3")
       audio.play().catch((error) => {
         console.error("Error playing SOS alert sound:", error)
         toast({
