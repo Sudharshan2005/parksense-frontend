@@ -189,24 +189,51 @@ export default function UserDashboard() {
   }, [phoneNumber, toast])
 
   // Play SOS alert sound
+  // useEffect(() => {
+  //   if (showSOSDialog && sosAlert?.message && sosAlert?.timestamp) {
+  //     const audio = new Audio("https://parksense-frontend.vercel.app/audio/Siren-SoundBible.com-1094437108.mp3")
+  //     audio.play().catch((error) => {
+  //       console.error("Error playing SOS alert sound:", error)
+  //       toast({
+  //         title: "Audio Error",
+  //         description: "Unable to play alert sound. Check browser permissions.",
+  //         variant: "destructive",
+  //       })
+  //     })
+  //     const timeout = setTimeout(() => {
+  //       audio.pause()
+  //       audio.currentTime = 0
+  //     }, 3000)
+  //     return () => clearTimeout(timeout)
+  //   }
+  // }, [showSOSDialog, sosAlert, toast])
+
   useEffect(() => {
     if (showSOSDialog && sosAlert?.message && sosAlert?.timestamp) {
       const audio = new Audio("https://parksense-frontend.vercel.app/audio/Siren-SoundBible.com-1094437108.mp3")
-      audio.play().catch((error) => {
-        console.error("Error playing SOS alert sound:", error)
-        toast({
-          title: "Audio Error",
-          description: "Unable to play alert sound. Check browser permissions.",
-          variant: "destructive",
-        })
-      })
-      const timeout = setTimeout(() => {
-        audio.pause()
-        audio.currentTime = 0
-      }, 3000)
-      return () => clearTimeout(timeout)
+  
+      const playAudio = async () => {
+        try {
+          await audio.play()
+          const timeout = setTimeout(() => {
+            audio.pause()
+            audio.currentTime = 0
+          }, 3000)
+          return () => clearTimeout(timeout)
+        } catch (error) {
+          console.error("Error playing SOS alert sound:", error)
+          toast({
+            title: "Audio Error",
+            description: "Unable to play alert sound. Check browser permissions or interaction requirements.",
+            variant: "destructive",
+          })
+        }
+      }
+  
+      playAudio()
     }
   }, [showSOSDialog, sosAlert, toast])
+  
 
   // Set QR code URL client-side
   useEffect(() => {
