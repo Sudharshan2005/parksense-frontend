@@ -25,6 +25,12 @@ interface Vehicle {
   user: { name?: string; phone: string }
 }
 
+interface NumberPlate {
+  _id: string
+  number: string
+  imageUrl: string
+}
+
 
 export default function ExitConfirmation() {
   const params = useParams<{ plateId: string }>()
@@ -37,6 +43,7 @@ export default function ExitConfirmation() {
   const [parkingDuration, setParkingDuration] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [exitCar, setExitCar] = useState<NumberPlate | null>(null)
 
   const plateNumber = params.plateId || "Error"
 
@@ -112,6 +119,27 @@ export default function ExitConfirmation() {
       if (!response.ok) {
         throw new Error('Failed to update vehicle status')
       }
+
+      const numberplateVehicle = await fetch(`${APP_LINK}/api/numberplates/${plateNumber}`, {
+        headers: { "Content-Type": "application/json" }
+      })
+      if(!numberplateVehicle.ok) {
+        throw new Error('Failed to detect vehicle numberplate')
+      }
+      const data: NumberPlate = await numberplateVehicle.json()
+      setExitCar(data);
+      const deleteImage = await fetch(`${APP_LINK}/api/upload/delete-image`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({key: data.imageUrl})
+      })
+      const data2 = await deleteImage.json();
+  
+      if (!deleteImage.ok) {
+        throw new Error('Failed to delete number plate');
+      }
+  
+      console.log('Deleted successfully');
       deleteNumberPlate(plateNumber);
       setParkingStarted(false)
       setExitTime(end.toISOString())

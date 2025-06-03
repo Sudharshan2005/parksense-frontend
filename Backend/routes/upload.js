@@ -1,6 +1,7 @@
 import express from "express"
 import multer from "multer";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import QRCode from "qrcode"
 import { v4 as uuidv4 } from 'uuid';
 import path from "path"
@@ -61,6 +62,33 @@ router.post('/upload', upload.single('image'), async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Upload or QR generation failed' });
+  }
+});
+
+router.delete('/delete-image', async (req, res) => {
+  try {
+    let { key } = req.body;
+
+    if (!key) {
+      return res.status(400).json({ message: 'Missing image key' });
+    }
+
+    if (key.startsWith("https://")) {
+      const url = new URL(key);
+      key = decodeURIComponent(url.pathname.slice(1));
+    }
+
+    const command = new DeleteObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: key,
+    });
+
+    await s3.send(command);
+
+    res.status(200).json({ message: 'Image deleted successfully' });
+  } catch (err) {
+    console.error('Server error:', err);
+    res.status(500).json({ message: 'Failed to delete image' });
   }
 });
 
