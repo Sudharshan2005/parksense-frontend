@@ -6,8 +6,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Camera, Car, Info, CheckCircle } from "lucide-react"
-
+import { Camera, Car, CheckCircle, Info } from "lucide-react"
 import jsQR from "jsqr"
 
 export default function QRCodeScanner() {
@@ -18,13 +17,11 @@ export default function QRCodeScanner() {
   const [scannedData, setScannedData] = useState<string | null>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     let stream: MediaStream | null = null
 
     const startScanner = async () => {
-      setIsLoading(true)
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" },
@@ -43,8 +40,6 @@ export default function QRCodeScanner() {
           description: "Unable to access webcam. Please check permissions.",
           variant: "destructive",
         })
-      } finally {
-        setIsLoading(false)
       }
     }
 
@@ -69,7 +64,6 @@ export default function QRCodeScanner() {
             const scannedUrl = code.data
             setScannedData(scannedUrl)
             setIsScanning(false)
-            setIsLoading(false)
 
             // Validate if the scanned data is a URL
             try {
@@ -116,7 +110,6 @@ export default function QRCodeScanner() {
 
   const handleStopScanning = () => {
     setIsScanning(false)
-    setIsLoading(false)
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream
       stream.getTracks().forEach((track) => track.stop())
@@ -147,18 +140,13 @@ export default function QRCodeScanner() {
           transition={{ duration: 0.5 }}
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
-          {/* Scanner Card */}
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Exit QR Code Scanner</CardTitle>
-              <CardDescription>Scan the QR code provided at the parking exit to complete your session.</CardDescription>
+              <CardDescription>Scan a QR code to exit.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {isLoading ? (
-                <div className="p-4 border border-gray-800 rounded-lg text-center">
-                  <p className="text-gray-400">Initializing webcam...</p>
-                </div>
-              ) : error ? (
+              {error ? (
                 <div className="p-4 border border-gray-800 rounded-lg">
                   <p className="text-red-500">{error}</p>
                 </div>
@@ -170,18 +158,15 @@ export default function QRCodeScanner() {
                   <div className="relative flex justify-center">
                     <video
                       ref={videoRef}
-                      className="w-full max-w-lg rounded-lg"
+                      className="w-full max-w-md rounded-lg"
                       style={{ display: isScanning ? "block" : "none" }}
                     />
                     <canvas ref={canvasRef} className="hidden" />
-                    {isScanning && (
-                      <div className="absolute inset-0 border-4 border-green-500 rounded-lg opacity-50 pointer-events-none"></div>
-                    )}
                   </div>
                   {scannedData && (
                     <div className="mt-4 p-4 border border-gray-800 rounded-lg">
                       <h3 className="text-lg font-medium mb-2">Scanned Result</h3>
-                      <p className="text-lg font-medium truncate">{scannedData}</p>
+                      <p className="text-lg font-medium">{scannedData}</p>
                     </div>
                   )}
                 </div>
@@ -200,7 +185,7 @@ export default function QRCodeScanner() {
                 <Button
                   className="w-full"
                   onClick={handleStartScanning}
-                  disabled={!!error || isLoading}
+                  disabled={!!error}
                 >
                   <Camera className="mr-2 h-4 w-4" /> Start Scanning
                 </Button>
@@ -233,7 +218,11 @@ export default function QRCodeScanner() {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 mt-1 text-green-500" />
-                  <span>Grant camera permissions when prompted.</span>
+                  <span>Grant camera permissions in your browser settings.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 mt-1 text-green-500" />
+                  <span>Access the site via HTTPS or http://localhost for local testing.</span>
                 </li>
               </ul>
             </CardContent>
@@ -244,7 +233,7 @@ export default function QRCodeScanner() {
       {/* Footer */}
       <footer className="border-t border-gray-800 p-4 bg-gray-900">
         <div className="container mx-auto text-center text-gray-400 text-sm">
-          <p>&copy; 2025 Parksense. All rights reserved.</p>
+          <p>© 2025 Parksense. All rights reserved.</p>
           <p className="mt-1">
             Need help? Contact us at{' '}
             <a href="mailto:support@parksense.com" className="text-blue-400 hover:underline">
